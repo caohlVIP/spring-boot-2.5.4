@@ -28,6 +28,9 @@ import org.springframework.core.annotation.AliasFor;
 import org.springframework.stereotype.Indexed;
 
 /**
+ * 标明为配置类，和 @Configuration注解一样，二者功能也一致，标注当前类是配置类，
+ * 并会将当前类内声明的一个或多个以@Bean注解标记的方法的实例纳入到spring容器中，并且实例名就是方法名。
+ *
  * Indicates that a class provides Spring Boot application
  * {@link Configuration @Configuration}. Can be used as an alternative to the Spring's
  * standard {@code @Configuration} annotation so that configuration can be found

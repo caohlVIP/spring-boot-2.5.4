@@ -70,6 +70,10 @@ public class EventPublishingRunListener implements SpringApplicationRunListener,
 		return 0;
 	}
 
+	/**
+	 * 本方法，实际上是调用了其成员变量initialMulticaster的multicastEvent(ApplicationEvent event)方法。
+	 * @param bootstrapContext the bootstrap context
+	 */
 	@Override
 	public void starting(ConfigurableBootstrapContext bootstrapContext) {
 		this.initialMulticaster

@@ -49,6 +49,13 @@ class SpringApplicationRunListeners {
 		this.applicationStartup = applicationStartup;
 	}
 
+	/**
+	 * 启动事件
+	 * 初始化启动上下文和监听器后，通过调用监听器中的starting方法发布【springboot开始启动】事件，
+	 * 在starting方法中，实际通过调用doWithListeners方法对事件进行发布。
+	 * @param bootstrapContext
+	 * @param mainApplicationClass
+	 */
 	void starting(ConfigurableBootstrapContext bootstrapContext, Class<?> mainApplicationClass) {
 		doWithListeners("spring.boot.application.starting", (listener) -> listener.starting(bootstrapContext),
 				(step) -> {
@@ -111,6 +118,18 @@ class SpringApplicationRunListeners {
 		doWithListeners(stepName, listenerAction, null);
 	}
 
+	/**
+	 *
+	 * 1、初始化一个StartupStep实例，并命名为"spring.boot.application.starting"，
+	 *   其作用为：追踪“执行时间”或其他指标。
+	 *
+	 * 2、对内部维护的监听器列表进行遍历，执行传入的listenerAction。
+	 *    由于listeners中只包含一个EventPublishingRunListener对象，
+	 *    故此处是用EventPublishingRunListener实例对象执行starting(bootstrapContext)方法。
+	 * @param stepName
+	 * @param listenerAction
+	 * @param stepAction
+	 */
 	private void doWithListeners(String stepName, Consumer<SpringApplicationRunListener> listenerAction,
 			Consumer<StartupStep> stepAction) {
 		StartupStep step = this.applicationStartup.start(stepName);

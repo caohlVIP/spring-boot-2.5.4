@@ -28,18 +28,25 @@ import org.springframework.util.ClassUtils;
 public enum WebApplicationType {
 
 	/**
+	 * 不启动内嵌的WebServer，不是运行web application
+	 *
 	 * The application should not run as a web application and should not start an
 	 * embedded web server.
 	 */
 	NONE,
 
 	/**
+	 * 启动内嵌的基于servlet的web server
+	 *
 	 * The application should run as a servlet-based web application and should start an
 	 * embedded servlet web server.
 	 */
 	SERVLET,
 
 	/**
+	 * 启动内嵌的reactive web server，这个application是一个reactive web application
+	 *	webflux类型
+	 *
 	 * The application should run as a reactive web application and should start an
 	 * embedded reactive web server.
 	 */
@@ -58,16 +65,29 @@ public enum WebApplicationType {
 
 	private static final String REACTIVE_APPLICATION_CONTEXT_CLASS = "org.springframework.boot.web.reactive.context.ReactiveWebApplicationContext";
 
+	/**
+	 * 判断 SpringBoot支持那个Web类型
+	 *
+	 * @return
+	 */
 	static WebApplicationType deduceFromClasspath() {
+		//尝试加载org.springframework.web.reactive.DispatcherHandler，
+		//如果成功并且加载org.springframework.web.servlet.DispatcherServlet  和org.glassfish.jersey.servlet.ServletContainer失败，
+		// 则这个application是WebApplicationType.REACTIVE类型。
+		//最新的流请求 webflux类型
 		if (ClassUtils.isPresent(WEBFLUX_INDICATOR_CLASS, null) && !ClassUtils.isPresent(WEBMVC_INDICATOR_CLASS, null)
 				&& !ClassUtils.isPresent(JERSEY_INDICATOR_CLASS, null)) {
 			return WebApplicationType.REACTIVE;
 		}
 		for (String className : SERVLET_INDICATOR_CLASSES) {
+			//如果ClassLoader里面同时加载这两个
+			// javax.servlet.Servlet和 org.springframework.web.context.ConfigurableWebApplicationContext成功。
+			// 则application是WebApplicationType.NONE 类型。
 			if (!ClassUtils.isPresent(className, null)) {
 				return WebApplicationType.NONE;
 			}
 		}
+		// 如果不是REACTIVE和NONE两种类型，那么 application是 WebApplicationType.SERVLET 类型
 		return WebApplicationType.SERVLET;
 	}
 

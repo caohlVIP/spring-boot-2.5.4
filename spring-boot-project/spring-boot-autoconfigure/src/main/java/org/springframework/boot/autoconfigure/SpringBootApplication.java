@@ -37,6 +37,8 @@ import org.springframework.core.annotation.AliasFor;
 import org.springframework.data.repository.Repository;
 
 /**
+ * 复合注解
+ *
  * Indicates a {@link Configuration configuration} class that declares one or more
  * {@link Bean @Bean} methods and also triggers {@link EnableAutoConfiguration
  * auto-configuration} and {@link ComponentScan component scanning}. This is a convenience

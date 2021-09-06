@@ -34,6 +34,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.core.io.support.SpringFactoriesLoader;
 
 /**
+ * 本注解中，最主要的要属@Import注解中，利用了AutoConfigurationImportSelector类，
+ * 可以帮助SpringBoot应用将所有符合条件的@Configuration配置都加载到当前SpringBoot创建并使用的IoC容器
+ *
  * Enable auto-configuration of the Spring Application Context, attempting to guess and
  * configure beans that you are likely to need. Auto-configuration classes are usually
  * applied based on your classpath and what beans you have defined. For example, if you
