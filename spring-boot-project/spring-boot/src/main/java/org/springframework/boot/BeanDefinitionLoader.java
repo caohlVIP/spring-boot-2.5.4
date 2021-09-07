@@ -48,6 +48,8 @@ import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
+ * 从底层加载bean定义，包含xml和javaConfig
+ *
  * Loads bean definitions from underlying sources, including XML and JavaConfig. Acts as a
  * simple facade over {@link AnnotatedBeanDefinitionReader},
  * {@link XmlBeanDefinitionReader} and {@link ClassPathBeanDefinitionScanner}. See
@@ -85,10 +87,15 @@ class BeanDefinitionLoader {
 		Assert.notNull(registry, "Registry must not be null");
 		Assert.notEmpty(sources, "Sources must not be empty");
 		this.sources = sources;
+		// 注解的处理器，在构造此类时会尝试注册一些与注解相关的后置处理器 但是在容器构造时重复
 		this.annotatedReader = new AnnotatedBeanDefinitionReader(registry);
+		// XML的处理器
 		this.xmlReader = (XML_ENABLED ? new XmlBeanDefinitionReader(registry) : null);
+		// groovy的处理器，可以从Groovy语言中读取bean信息
 		this.groovyReader = (isGroovyPresent() ? new GroovyBeanDefinitionReader(registry) : null);
+		// 扫描器（注册spring扫描类过滤器，加了特定注解的类会被扫描到，带有@Component、@Repository、@Service、@Controller、@ManagedBean、@Named）
 		this.scanner = new ClassPathBeanDefinitionScanner(registry);
+		// 添加类排除过滤器 也就是后面scanner不会再扫描这些主类了
 		this.scanner.addExcludeFilter(new ClassExcludeFilter(sources));
 	}
 
@@ -139,18 +146,22 @@ class BeanDefinitionLoader {
 
 	private void load(Object source) {
 		Assert.notNull(source, "Source must not be null");
+		// 从Class加载
 		if (source instanceof Class<?>) {
 			load((Class<?>) source);
 			return;
 		}
+		// 从Resource加载
 		if (source instanceof Resource) {
 			load((Resource) source);
 			return;
 		}
+		// 从Package加载
 		if (source instanceof Package) {
 			load((Package) source);
 			return;
 		}
+		// 从 CharSequence 加载
 		if (source instanceof CharSequence) {
 			load((CharSequence) source);
 			return;

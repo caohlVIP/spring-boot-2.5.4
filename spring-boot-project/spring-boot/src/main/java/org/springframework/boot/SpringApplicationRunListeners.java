@@ -65,6 +65,11 @@ class SpringApplicationRunListeners {
 				});
 	}
 
+	/**
+	 * SpringApplicationRunListeners：
+	 * 这里之后，environment中的PropertySources中已经包含了所有的配置文件了
+	 * 这里的listeners就一个：EventPublishingRunListener，调用EventPublishingRunListener类中的environmentPrepared()方法
+	 */
 	void environmentPrepared(ConfigurableBootstrapContext bootstrapContext, ConfigurableEnvironment environment) {
 		doWithListeners("spring.boot.application.environment-prepared",
 				(listener) -> listener.environmentPrepared(bootstrapContext, environment));

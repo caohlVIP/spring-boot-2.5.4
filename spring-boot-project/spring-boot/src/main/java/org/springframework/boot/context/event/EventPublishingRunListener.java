@@ -80,9 +80,15 @@ public class EventPublishingRunListener implements SpringApplicationRunListener,
 				.multicastEvent(new ApplicationStartingEvent(bootstrapContext, this.application, this.args));
 	}
 
+	/**
+	 * 环境准备
+	 * @param bootstrapContext the bootstrap context
+	 * @param environment the environment
+	 */
 	@Override
 	public void environmentPrepared(ConfigurableBootstrapContext bootstrapContext,
 			ConfigurableEnvironment environment) {
+		//调用multicastEvent()方法、进行广播事件
 		this.initialMulticaster.multicastEvent(
 				new ApplicationEnvironmentPreparedEvent(bootstrapContext, this.application, this.args, environment));
 	}

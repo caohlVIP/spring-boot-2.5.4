@@ -92,11 +92,17 @@ public final class ConfigurationPropertySources {
 			attached = null;
 		}
 		if (attached == null) {
+			//创建一个ConfigurationPropertySourcesPropertySource实体类，附加到source的首位
 			sources.addFirst(new ConfigurationPropertySourcesPropertySource(ATTACHED_PROPERTY_SOURCE_NAME,
 					new SpringConfigurationPropertySources(sources)));
 		}
 	}
 
+	/**
+	 * 获取附加的属性，给定的参数为空，则返回null，不为空则返回key为configurationProperties的值。
+	 * @param sources
+	 * @return
+	 */
 	static PropertySource<?> getAttached(MutablePropertySources sources) {
 		return (sources != null) ? sources.get(ATTACHED_PROPERTY_SOURCE_NAME) : null;
 	}

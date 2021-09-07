@@ -68,21 +68,31 @@ class SpringApplicationBannerPrinter {
 	}
 
 	Banner print(Environment environment, Class<?> sourceClass, PrintStream out) {
+		// 1. 获取Banner
 		Banner banner = getBanner(environment);
+		// 2. 调用Banner中的printBanner方法
 		banner.printBanner(environment, sourceClass, out);
+		// 3. 实例化PrintedBanner类
 		return new PrintedBanner(banner, sourceClass);
 	}
 
 	private Banner getBanner(Environment environment) {
+		// 实例化Banners
 		Banners banners = new Banners();
+		// 设置ImageBanner
 		banners.addIfNotNull(getImageBanner(environment));
+		// 设置TextBanner
 		banners.addIfNotNull(getTextBanner(environment));
+		// 如果Banners对象的banners不为空，也就是至少找到了banner.gif，banner.jpg，banner.png，banner.txt其中的一个，
+		// 那么返回该Banners对象，否则返回默认的SpringBootBanner对象
 		if (banners.hasAtLeastOneBanner()) {
 			return banners;
 		}
+		// fallbackBanner不为null的话,返回fallbackBanner.
 		if (this.fallbackBanner != null) {
 			return this.fallbackBanner;
 		}
+		// 返回默认的banner.默认的bannenr为 SpringBootBanner.
 		return DEFAULT_BANNER;
 	}
 
@@ -101,11 +111,14 @@ class SpringApplicationBannerPrinter {
 	}
 
 	private Banner getImageBanner(Environment environment) {
+		// 首先判断是否配置了系统属性banner.image.location
 		String location = environment.getProperty(BANNER_IMAGE_LOCATION_PROPERTY);
+		// 如果有相关属性，直接返回ImageBanner.
 		if (StringUtils.hasLength(location)) {
 			Resource resource = this.resourceLoader.getResource(location);
 			return resource.exists() ? new ImageBanner(resource) : null;
 		}
+		// IMAGE_EXTENSION 这个常量值：{ "gif", "jpg", "png" }，如果有相关图片的话，返回
 		for (String ext : IMAGE_EXTENSION) {
 			Resource resource = this.resourceLoader.getResource("banner." + ext);
 			if (resource.exists()) {
@@ -130,6 +143,10 @@ class SpringApplicationBannerPrinter {
 
 		private final List<Banner> banners = new ArrayList<>();
 
+		/**
+		 * 先判断是否为空，不为空才进行设定
+		 * @param banner
+		 */
 		void addIfNotNull(Banner banner) {
 			if (banner != null) {
 				this.banners.add(banner);

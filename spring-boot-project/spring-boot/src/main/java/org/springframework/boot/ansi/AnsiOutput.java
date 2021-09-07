@@ -84,13 +84,16 @@ public abstract class AnsiOutput {
 	}
 
 	/**
+	 *
 	 * Create a new ANSI string from the specified elements. Any {@link AnsiElement}s will
 	 * be encoded as required.
 	 * @param elements the elements to encode
 	 * @return a string of the encoded elements
 	 */
 	public static String toString(Object... elements) {
+		// 实例化StringBuilder进行字符串拼接.
 		StringBuilder sb = new StringBuilder();
+		// 判断是否可用
 		if (isEnabled()) {
 			buildEnabled(sb, elements);
 		}
@@ -137,9 +140,17 @@ public abstract class AnsiOutput {
 		}
 	}
 
+	/**
+	 * 这里用到了我们之前分析过的知识.springApplication run 方法执行前4步的过程中.
+	 * 发送了ApplicationEnvironmentPreparedEvent 事件.
+	 * 其中AnsiOutputApplicationListener 对该事件进行了处理 详情见  AnsiOutputApplicationListener类:
+	 * @return
+	 */
 	private static boolean isEnabled() {
 		if (enabled == Enabled.DETECT) {
+			// 默认走到这里.
 			if (ansiCapable == null) {
+				// 对于当前场景来说.ansiCapable 为 null.因此会执行detectIfAnsiCapable方法
 				ansiCapable = detectIfAnsiCapable();
 			}
 			return ansiCapable;

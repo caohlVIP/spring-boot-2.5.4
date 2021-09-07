@@ -61,6 +61,9 @@ final class EnvironmentConverter {
 	}
 
 	/**
+	 * 如果environment.class和模块使用的EnvironmentClass()不一致，那么转换成一样的
+	 * 最终都为StandardEnvironment类型的
+	 *
 	 * Converts the given {@code environment} to the given {@link StandardEnvironment}
 	 * type. If the environment is already of the same type, no conversion is performed
 	 * and it is returned unchanged.
@@ -76,6 +79,13 @@ final class EnvironmentConverter {
 		return convertEnvironment(environment, type);
 	}
 
+	/**
+	 * environment转换
+	 *
+	 * @param environment
+	 * @param type
+	 * @return
+	 */
 	private StandardEnvironment convertEnvironment(ConfigurableEnvironment environment,
 			Class<? extends StandardEnvironment> type) {
 		StandardEnvironment result = createEnvironment(type);

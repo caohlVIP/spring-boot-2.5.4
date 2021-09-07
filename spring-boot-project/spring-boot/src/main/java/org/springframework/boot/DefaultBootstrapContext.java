@@ -126,6 +126,8 @@ public class DefaultBootstrapContext implements ConfigurableBootstrapContext {
 	}
 
 	/**
+	 * 调用本方式时，关闭BootstrapContext，同时，ApplicationContext已经准备好
+	 *
 	 * Method to be called when {@link BootstrapContext} is closed and the
 	 * {@link ApplicationContext} is prepared.
 	 * @param applicationContext the prepared context

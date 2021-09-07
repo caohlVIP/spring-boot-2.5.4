@@ -39,18 +39,27 @@ class SpringBootBanner implements Banner {
 
 	private static final int STRAP_LINE_SIZE = 42;
 
+	/**
+	 * 真正输出banner的方法
+	 *
+	 * @param environment the spring environment
+	 * @param sourceClass the source class for the application
+	 * @param printStream
+	 */
 	@Override
 	public void printBanner(Environment environment, Class<?> sourceClass, PrintStream printStream) {
+		// 循环，打印定义好的数组，即默认的banner
 		for (String line : BANNER) {
 			printStream.println(line);
 		}
+		// 获取springboot版本信息的,并输出，为了与之前的字符对齐，使用空格补齐。
 		String version = SpringBootVersion.getVersion();
 		version = (version != null) ? " (v" + version + ")" : "";
 		StringBuilder padding = new StringBuilder();
 		while (padding.length() < STRAP_LINE_SIZE - (version.length() + SPRING_BOOT.length())) {
 			padding.append(" ");
 		}
-
+		// 通过AnsiOutput.toString()方法生成字符.输出到PrintStream.最后输出一个回车换行.
 		printStream.println(AnsiOutput.toString(AnsiColor.GREEN, SPRING_BOOT, AnsiColor.DEFAULT, padding.toString(),
 				AnsiStyle.FAINT, version));
 		printStream.println();

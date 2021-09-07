@@ -293,7 +293,7 @@ public class SpringApplication {
 		this.bootstrapRegistryInitializers = getBootstrapRegistryInitializersFromSpringFactories();
 		// 设置上下文初始化器列表，用于后续在准备应用上下文时，在生成上下文后对上下文进行一些初始化（一共获得7个初始化器）
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
-		// 设置监听器列表，用于在启动时发布各种事件通知（springboot启动运用了许多的监听者模式）（一共9个监听器）
+		// 设置监听器列表，用于在启动时发布各种事件通知（springboot启动运用了许多的监听者模式）（一共8个监听器）
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
 		// 获取到主启动类实例
 		this.mainApplicationClass = deduceMainApplicationClass();
@@ -374,11 +374,21 @@ public class SpringApplication {
 		try {
 			// 创建一个DefaultApplicationArguments对象，它持有着args参数，就是main函数传进来的参数
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+			// 取得可配置的环境变量
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
+			// 配置忽略BeanInfo
 			configureIgnoreBeanInfo(environment);
+			// 打印Banner
 			Banner printedBanner = printBanner(environment);
+			// 创建SpringBoot上下文
+			// （根据环境不同分为：
+			// 		AnnotationConfigServletWebServerApplicationContext、
+			// 		AnnotationConfigReactiveWebServerApplicationContext、
+			// 		AnnotationConfigApplicationContext	）
 			context = createApplicationContext();
+			// 为application context设置 ApplicationStartup
 			context.setApplicationStartup(this.applicationStartup);
+			// 调用prepareContext
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
 			refreshContext(context);
 			afterRefresh(context, applicationArguments);
@@ -416,7 +426,7 @@ public class SpringApplication {
 	}
 
 	/**
-	 *
+	 * 主要是为了查找并设置配置文件信息到 environment 中
 	 * @param listeners
 	 * @param bootstrapContext
 	 * @param applicationArguments
@@ -424,19 +434,29 @@ public class SpringApplication {
 	 */
 	private ConfigurableEnvironment prepareEnvironment(SpringApplicationRunListeners listeners,
 													   DefaultBootstrapContext bootstrapContext, ApplicationArguments applicationArguments) {
+		// 根据应用类型，创建应用环境：如得到系统的参数、JVM及Servlet等参数，等。
 		// Create and configure the environment
 		ConfigurableEnvironment environment = getOrCreateEnvironment();
+		// 将 defaultProperties、commandLine及active-prifiles 属性加载到环境中
+		// commandLine 在 args 中配置
+		// 其它参数可在如下4个路径中配置：servletConfigInitParams、servletContextInitParams、systemProperties、systemEnvironment
 		configureEnvironment(environment, applicationArguments.getSourceArgs());
+		// 加一个ConfigurationPropertySources
 		ConfigurationPropertySources.attach(environment);
+		// 将 spirng.config 配置文件加载到环境中 主要步骤，查找active的profile
 		listeners.environmentPrepared(bootstrapContext, environment);
+		// 移动defaultProperties属性，使其成为最后一个
 		DefaultPropertiesPropertySource.moveToEnd(environment);
 		Assert.state(!environment.containsProperty("spring.main.environment-prefix"),
 				"Environment prefix cannot be set via properties.");
+		// 将environment绑定到SpringApplication，即与启动类进行绑定
 		bindToSpringApplication(environment);
+		// 判断是否为自定义的环境
 		if (!this.isCustomEnvironment) {
 			environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
 					deduceEnvironmentClass());
 		}
+		//将环境依附到PropertySources
 		ConfigurationPropertySources.attach(environment);
 		return environment;
 	}
@@ -452,38 +472,67 @@ public class SpringApplication {
 		}
 	}
 
+	/**
+	 * 准备上下文环境
+	 *
+	 * @param bootstrapContext
+	 * @param context
+	 * @param environment
+	 * @param listeners
+	 * @param applicationArguments
+	 * @param printedBanner
+	 */
 	private void prepareContext(DefaultBootstrapContext bootstrapContext, ConfigurableApplicationContext context,
 								ConfigurableEnvironment environment, SpringApplicationRunListeners listeners,
 								ApplicationArguments applicationArguments, Banner printedBanner) {
+		// 设置上下文的环境属性
+		// 将ConfigurableEnvironment对象添加到context中
 		context.setEnvironment(environment);
+		// 后置处理 添加一些属性 最重要的就是添加conversionService
 		postProcessApplicationContext(context);
+		// 对各种ApplicationContextInitializer进行初始化和扩展
 		applyInitializers(context);
+		// listeners中添加就绪的上下文对象，发布ApplicationContextInitializedEvent事件
 		listeners.contextPrepared(context);
+
 		bootstrapContext.close(context);
 		if (this.logStartupInfo) {
 			logStartupInfo(context.getParent() == null);
 			logStartupProfileInfo(context);
 		}
+		// 添加启动所需要的特定的单例bean， -> DefaultListableBeanFactory 对象
 		// Add boot specific singleton beans
 		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
+		// 将applicationArguments注册成单例Bean
 		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
+		// 将Banner注册为单例Bean
 		if (printedBanner != null) {
 			beanFactory.registerSingleton("springBootBanner", printedBanner);
 		}
+		// 设置允许bean定义覆盖
 		if (beanFactory instanceof DefaultListableBeanFactory) {
 			((DefaultListableBeanFactory) beanFactory)
 					.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
 		}
+		// 是否添加LazyInitializationBeanFactoryPostProcessor进行懒加载处理
 		if (this.lazyInitialization) {
 			context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor());
 		}
+		// 加载所有资源,返回的set为不可修改的，当前只有主运行类
 		// Load the sources
 		Set<Object> sources = getAllSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
+		// 根据资源进行类定义的注册 此处就包括主类的注册（第二个参数，将set转换为Object类型的数组）
 		load(context, sources.toArray(new Object[0]));
+		// 发布ApplicationPreparedEvent事件
 		listeners.contextLoaded(context);
 	}
 
+	/**
+	 * 刷新上下文
+	 *
+	 * @param context
+	 */
 	private void refreshContext(ConfigurableApplicationContext context) {
 		if (this.registerShutdownHook) {
 			shutdownHook.registerApplicationContext(context);
@@ -607,7 +656,9 @@ public class SpringApplication {
 		if (this.addConversionService) {
 			environment.setConversionService(new ApplicationConversionService());
 		}
+		// 配置PropertySources
 		configurePropertySources(environment, args);
+		// 配置Profiles
 		configureProfiles(environment, args);
 	}
 
@@ -620,9 +671,13 @@ public class SpringApplication {
 	 */
 	protected void configurePropertySources(ConfigurableEnvironment environment, String[] args) {
 		MutablePropertySources sources = environment.getPropertySources();
+		// 1. 如果defaultProperties不为空，则继续添加defaultProperties
 		if (!CollectionUtils.isEmpty(this.defaultProperties)) {
 			DefaultPropertiesPropertySource.addOrMerge(this.defaultProperties, sources);
 		}
+		// 2. 如果addCommandLineProperties为true并且有命令参数，
+		//    分两步骤走：第一步存在commandLineArgs则继续设置属性；
+		//    第二步commandLineArgs不存在则在头部添加commandLineArgs
 		if (this.addCommandLineProperties && args.length > 0) {
 			String name = CommandLinePropertySource.COMMAND_LINE_PROPERTY_SOURCE_NAME;
 			if (sources.contains(name)) {
@@ -651,6 +706,7 @@ public class SpringApplication {
 	protected void configureProfiles(ConfigurableEnvironment environment, String[] args) {
 	}
 
+
 	private void configureIgnoreBeanInfo(ConfigurableEnvironment environment) {
 		if (System.getProperty(CachedIntrospectionResults.IGNORE_BEANINFO_PROPERTY_NAME) == null) {
 			Boolean ignore = environment.getProperty("spring.beaninfo.ignore", Boolean.class, Boolean.TRUE);
@@ -671,13 +727,24 @@ public class SpringApplication {
 		}
 	}
 
+	/**
+	 * 打印Banner
+	 * @param environment
+	 * @return
+	 */
 	private Banner printBanner(ConfigurableEnvironment environment) {
+		// 如果Banner关闭了，则不打印
 		if (this.bannerMode == Banner.Mode.OFF) {
 			return null;
 		}
+		// 获取资源加载器ResourceLoader
 		ResourceLoader resourceLoader = (this.resourceLoader != null) ? this.resourceLoader
 				: new DefaultResourceLoader(null);
+		// 实例化SpringApplicationBannerPrinter类
+		// SpringApplicationBannerPrinter的属性DEFAULT_BANNER就是SpringBootBanner类，
+		// SpringBootBanner的BANNER属性(字符数组)就是熟悉的控制台的banner图
 		SpringApplicationBannerPrinter bannerPrinter = new SpringApplicationBannerPrinter(resourceLoader, this.banner);
+		// 输出模式为日志，则打印到日志，否则输出到System.out
 		if (this.bannerMode == Mode.LOG) {
 			return bannerPrinter.print(environment, this.mainApplicationClass, logger);
 		}
@@ -697,6 +764,8 @@ public class SpringApplication {
 	}
 
 	/**
+	 * 后置处理 添加一些属性 最重要的就是添加conversionService
+	 *
 	 * Apply any relevant post processing the {@link ApplicationContext}. Subclasses can
 	 * apply additional processing as required.
 	 * @param context the application context
@@ -727,6 +796,7 @@ public class SpringApplication {
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	protected void applyInitializers(ConfigurableApplicationContext context) {
+		// 在构造SpringApplication 通过SPI读取的initializers
 		for (ApplicationContextInitializer initializer : getInitializers()) {
 			Class<?> requiredType = GenericTypeResolver.resolveTypeArgument(initializer.getClass(),
 					ApplicationContextInitializer.class);
@@ -747,6 +817,8 @@ public class SpringApplication {
 	}
 
 	/**
+	 * 记录配置文件信息
+	 *
 	 * Called to log active profile information.
 	 * @param context the application context
 	 */
@@ -778,6 +850,8 @@ public class SpringApplication {
 	}
 
 	/**
+	 * 将bean信息加载到上下文中
+	 *
 	 * Load beans into the application context.
 	 * @param context the context to load beans into
 	 * @param sources the sources to load
@@ -786,6 +860,7 @@ public class SpringApplication {
 		if (logger.isDebugEnabled()) {
 			logger.debug("Loading source " + StringUtils.arrayToCommaDelimitedString(sources));
 		}
+		// 通过创建BeanDefinitionLoader来加载bean
 		BeanDefinitionLoader loader = createBeanDefinitionLoader(getBeanDefinitionRegistry(context), sources);
 		if (this.beanNameGenerator != null) {
 			loader.setBeanNameGenerator(this.beanNameGenerator);
@@ -796,6 +871,7 @@ public class SpringApplication {
 		if (this.environment != null) {
 			loader.setEnvironment(this.environment);
 		}
+		// 指定定义的加载
 		loader.load();
 	}
 
@@ -837,6 +913,7 @@ public class SpringApplication {
 	}
 
 	/**
+	 *
 	 * Factory method used to create the {@link BeanDefinitionLoader}.
 	 * @param registry the bean definition registry
 	 * @param sources the sources to load
@@ -1262,6 +1339,7 @@ public class SpringApplication {
 	}
 
 	/**
+	 *
 	 * Return an immutable set of all the sources that will be added to an
 	 * ApplicationContext when {@link #run(String...)} is called. This method combines any
 	 * primary sources specified in the constructor with any additional ones that have
