@@ -207,6 +207,10 @@ public class LoggingApplicationListener implements GenericApplicationListener {
 		return false;
 	}
 
+	/**
+	 *
+	 * @param event
+	 */
 	@Override
 	public void onApplicationEvent(ApplicationEvent event) {
 		if (event instanceof ApplicationStartingEvent) {
@@ -227,6 +231,10 @@ public class LoggingApplicationListener implements GenericApplicationListener {
 		}
 	}
 
+	/**
+	 * 初始化loggingSystem
+	 * @param event
+	 */
 	private void onApplicationStartingEvent(ApplicationStartingEvent event) {
 		this.loggingSystem = LoggingSystem.get(event.getSpringApplication().getClassLoader());
 		this.loggingSystem.beforeInitialize();

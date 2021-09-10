@@ -306,9 +306,13 @@ public class SpringApplication {
 	@SuppressWarnings("deprecation")
 	private List<BootstrapRegistryInitializer> getBootstrapRegistryInitializersFromSpringFactories() {
 		ArrayList<BootstrapRegistryInitializer> initializers = new ArrayList<>();
+		// 通过spring的spring.factories定义文件，获取相对应的类实例。
 		getSpringFactoriesInstances(Bootstrapper.class).stream()
+				// 获取的实例，执行对应的initialize方法，为BootstrapRegistryInitializer类中的initialize
 				.map((bootstrapper) -> ((BootstrapRegistryInitializer) bootstrapper::initialize))
+				// 加入到准备好的initializers的list集合中
 				.forEach(initializers::add);
+		//
 		initializers.addAll(getSpringFactoriesInstances(BootstrapRegistryInitializer.class));
 		return initializers;
 	}
@@ -374,13 +378,13 @@ public class SpringApplication {
 		try {
 			// 创建一个DefaultApplicationArguments对象，它持有着args参数，就是main函数传进来的参数
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
-			// 取得可配置的环境变量
+			// 取得可配置的环境变量，即准备环境
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
 			// 配置忽略BeanInfo
 			configureIgnoreBeanInfo(environment);
-			// 打印Banner
+			// 打印Banner，启动时打印的logo
 			Banner printedBanner = printBanner(environment);
-			// 创建SpringBoot上下文
+			// 创建SpringBoot上下文，即创建spring容器
 			// （根据环境不同分为：
 			// 		AnnotationConfigServletWebServerApplicationContext、
 			// 		AnnotationConfigReactiveWebServerApplicationContext、
@@ -388,18 +392,24 @@ public class SpringApplication {
 			context = createApplicationContext();
 			// 为application context设置 ApplicationStartup
 			context.setApplicationStartup(this.applicationStartup);
-			// 调用prepareContext
+			// 调用prepareContext，即spring容器前置处理
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
+			// 刷新容器
 			refreshContext(context);
+			// spring容器后置处理
 			afterRefresh(context, applicationArguments);
+			// 结束计时器并打印，这就是我们启动后console的显示的时间
 			stopWatch.stop();
 			if (this.logStartupInfo) {
 				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
 			}
+			// 发出启动结束事件
 			listeners.started(context);
+			// 执行runner的run方法
 			callRunners(context, applicationArguments);
 		}
 		catch (Throwable ex) {
+			// 异常处理，如果run过程发生异常进行相应的处理
 			handleRunFailure(context, ex, listeners);
 			throw new IllegalStateException(ex);
 		}
@@ -408,9 +418,11 @@ public class SpringApplication {
 			listeners.running(context);
 		}
 		catch (Throwable ex) {
+			// 异常处理，如果run过程发生异常
 			handleRunFailure(context, ex, null);
 			throw new IllegalStateException(ex);
 		}
+		// 返回最终构建的容器对象
 		return context;
 	}
 
@@ -420,7 +432,9 @@ public class SpringApplication {
 	 * @return
 	 */
 	private DefaultBootstrapContext createBootstrapContext() {
+		// 创建默认的DefaultBootstrapContext实例，即ConfigurableBootstrapContext
 		DefaultBootstrapContext bootstrapContext = new DefaultBootstrapContext();
+		// 循环执行注册器的初始化操作
 		this.bootstrapRegistryInitializers.forEach((initializer) -> initializer.initialize(bootstrapContext));
 		return bootstrapContext;
 	}
@@ -451,8 +465,9 @@ public class SpringApplication {
 				"Environment prefix cannot be set via properties.");
 		// 将environment绑定到SpringApplication，即与启动类进行绑定
 		bindToSpringApplication(environment);
-		// 判断是否为自定义的环境
+		// 判断是否为自定义的环境，如果用户使用spring.main.web-application-type属性手动设置了webApplicationType
 		if (!this.isCustomEnvironment) {
+			// 将环境对象转换成用户设置的webApplicationType相关类型，他们是继承同一个父类，直接强转
 			environment = new EnvironmentConverter(getClassLoader()).convertEnvironmentIfNecessary(environment,
 					deduceEnvironmentClass());
 		}
@@ -490,9 +505,10 @@ public class SpringApplication {
 		context.setEnvironment(environment);
 		// 后置处理 添加一些属性 最重要的就是添加conversionService
 		postProcessApplicationContext(context);
-		// 对各种ApplicationContextInitializer进行初始化和扩展
+		// 对各种ApplicationContextInitializer进行初始化和扩展，
+		// 即执行所有ApplicationContextInitializer对象的initialize方法（这些对象是通过读取spring.factories加载）
 		applyInitializers(context);
-		// listeners中添加就绪的上下文对象，发布ApplicationContextInitializedEvent事件
+		// listeners中添加就绪的上下文对象，发布ApplicationContextInitializedEvent事件。即发布上下文准备完成事件到所有监听器
 		listeners.contextPrepared(context);
 
 		bootstrapContext.close(context);
@@ -534,9 +550,13 @@ public class SpringApplication {
 	 * @param context
 	 */
 	private void refreshContext(ConfigurableApplicationContext context) {
+		// 注册一个关闭钩子，在jvm停止时会触发，然后退出时执行一定的退出逻辑
 		if (this.registerShutdownHook) {
+			// 添加：Runtime.getRuntime().addShutdownHook()
+			// 移除：Runtime.getRuntime().removeShutdownHook(this.shutdownHook)
 			shutdownHook.registerApplicationContext(context);
 		}
+		// ApplicationContext真正开始初始化容器和创建bean的阶段
 		refresh(context);
 	}
 
@@ -554,10 +574,12 @@ public class SpringApplication {
 	 * @return
 	 */
 	private SpringApplicationRunListeners getRunListeners(String[] args) {
-		//获取了一个class数组types
-		//其中的元素分别为：SpringApplication和String数组的class对象，types主要用于在后序反射初始化对象时，获取到目标的构造方法。
+		// 获取了一个class数组types
+		// 其中的元素分别为：SpringApplication和String数组的class对象，types主要用于在后序反射初始化对象时，获取到目标的构造方法。
 		Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
-		//获取SpringApplicationRunListener实例对象。
+		// 获取SpringApplicationRunListener实例对象。
+		// 获取并维护SpringApplicationRunListener接口的子类对象列表。在后续的启动过程中，交由listeners发布的事件，
+		// 实际上是遍历其内部管理的SpringApplicationRunListener对象列表进行发布的。
 		return new SpringApplicationRunListeners(logger,
 				getSpringFactoriesInstances(SpringApplicationRunListener.class, types, this, args),
 				this.applicationStartup);
@@ -588,7 +610,7 @@ public class SpringApplication {
 		// 由于this.resourceLoader为null，故此处返回的ClassUtils.getDefaultClassLoader()
 		ClassLoader classLoader = getClassLoader();
 		// Use names and ensure unique to protect against duplicates
-		// 从此处获取到满足类型的所有类名称列表.使用名称并确保唯一，以防止重复。
+		// 从此处获取到满足类型的所有类名称列表.使用名称并确保唯一，以防止重复。(只是类的名称)
 		Set<String> names = new LinkedHashSet<>(SpringFactoriesLoader.loadFactoryNames(type, classLoader));
 		// 用类名称列表，通过反射机制对它们进行实例化
 		List<T> instances = createSpringFactoriesInstances(type, parameterTypes, classLoader, args, names);
@@ -611,13 +633,18 @@ public class SpringApplication {
 	@SuppressWarnings("unchecked")
 	private <T> List<T> createSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes,
 													   ClassLoader classLoader, Object[] args, Set<String> names) {
+		// 接收实例的list集合
 		List<T> instances = new ArrayList<>(names.size());
 		for (String name : names) {
 			try {
+				// 根据名称加载类信息
 				Class<?> instanceClass = ClassUtils.forName(name, classLoader);
 				Assert.isAssignable(type, instanceClass);
+				// 根据类信息获取构造函数
 				Constructor<?> constructor = instanceClass.getDeclaredConstructor(parameterTypes);
+				// 构造对象
 				T instance = (T) BeanUtils.instantiateClass(constructor, args);
+				// 讲对象加入到list集合中
 				instances.add(instance);
 			}
 			catch (Throwable ex) {
@@ -885,15 +912,19 @@ public class SpringApplication {
 	}
 
 	/**
+	 * 获得类加载器
+	 *
 	 * Either the ClassLoader that will be used in the ApplicationContext (if
 	 * {@link #setResourceLoader(ResourceLoader) resourceLoader} is set, or the context
 	 * class loader (if not null), or the loader of the Spring {@link ClassUtils} class.
 	 * @return a ClassLoader (never null)
 	 */
 	public ClassLoader getClassLoader() {
+		// 如果当前资源加载器不为空，则调用当前资源加载器的类加载器
 		if (this.resourceLoader != null) {
 			return this.resourceLoader.getClassLoader();
 		}
+		// 获得默认的类加载器
 		return ClassUtils.getDefaultClassLoader();
 	}
 
@@ -924,14 +955,22 @@ public class SpringApplication {
 	}
 
 	/**
+	 * 调用ConfigurableApplicationContext的刷新方法，ConfigurableApplicationContext是从ApplicationContext集成来的
+	 *	ConfigurableApplicationContext接口实现有三个类，
+	 *		1、AbstractApplicationContext
+	 *		2、ReactiveWebServerApplicationContext
+	 *		3、ServletWebServerApplicationContext
 	 * Refresh the underlying {@link ApplicationContext}.
 	 * @param applicationContext the application context to refresh
 	 */
 	protected void refresh(ConfigurableApplicationContext applicationContext) {
+		// 调用应用上下文对象的refresh()方法
 		applicationContext.refresh();
 	}
 
 	/**
+	 * 空的方法
+	 *
 	 * Called after the context has been refreshed.
 	 * @param context the application context
 	 * @param args the application arguments
@@ -972,11 +1011,20 @@ public class SpringApplication {
 		}
 	}
 
+	/**
+	 * 执行run方法过程中，出现异常进行相关的处理
+	 *
+	 * @param context
+	 * @param exception
+	 * @param listeners
+	 */
 	private void handleRunFailure(ConfigurableApplicationContext context, Throwable exception,
 								  SpringApplicationRunListeners listeners) {
 		try {
 			try {
+				// 获得退出码
 				handleExitCode(context, exception);
+				// listeners不为空，发送failed广播
 				if (listeners != null) {
 					listeners.failed(context, exception);
 				}
@@ -1004,6 +1052,12 @@ public class SpringApplication {
 		}
 	}
 
+	/**
+	 * 报告失败信息
+	 *
+	 * @param exceptionReporters
+	 * @param failure
+	 */
 	private void reportFailure(Collection<SpringBootExceptionReporter> exceptionReporters, Throwable failure) {
 		try {
 			for (SpringBootExceptionReporter reporter : exceptionReporters) {
@@ -1023,6 +1077,8 @@ public class SpringApplication {
 	}
 
 	/**
+	 * 注册异常信息
+	 *
 	 * Register that the given exception has been logged. By default, if the running in
 	 * the main thread, this method will suppress additional printing of the stacktrace.
 	 * @param exception the exception that was logged
@@ -1030,14 +1086,24 @@ public class SpringApplication {
 	protected void registerLoggedException(Throwable exception) {
 		SpringBootExceptionHandler handler = getSpringBootExceptionHandler();
 		if (handler != null) {
+			// 注册异常信息
 			handler.registerLoggedException(exception);
 		}
 	}
 
+	/**
+	 * 获得退出码
+	 * @param context
+	 * @param exception
+	 */
 	private void handleExitCode(ConfigurableApplicationContext context, Throwable exception) {
+		// 根据异常获得退出码
 		int exitCode = getExitCodeFromException(context, exception);
+		// 如果退出码不等于0
 		if (exitCode != 0) {
+			// 上下文不为空
 			if (context != null) {
+				// 将退出的时间，推送给上下文
 				context.publishEvent(new ExitCodeEvent(context, exitCode));
 			}
 			SpringBootExceptionHandler handler = getSpringBootExceptionHandler();
@@ -1047,6 +1113,13 @@ public class SpringApplication {
 		}
 	}
 
+	/**
+	 * 根据异常获得退出码
+	 *
+	 * @param context
+	 * @param exception
+	 * @return
+	 */
 	private int getExitCodeFromException(ConfigurableApplicationContext context, Throwable exception) {
 		int exitCode = getExitCodeFromMappedException(context, exception);
 		if (exitCode == 0) {
@@ -1055,7 +1128,14 @@ public class SpringApplication {
 		return exitCode;
 	}
 
+	/**
+	 * 根据异常映射获取退出码
+	 * @param context
+	 * @param exception
+	 * @return
+	 */
 	private int getExitCodeFromMappedException(ConfigurableApplicationContext context, Throwable exception) {
+		// 如果context为空，或者context没有启动成功，直接返回0
 		if (context == null || !context.isActive()) {
 			return 0;
 		}
@@ -1065,6 +1145,12 @@ public class SpringApplication {
 		return generators.getExitCode();
 	}
 
+	/**
+	 * 递归调用，
+	 * 获取到退出码
+	 * @param exception
+	 * @return
+	 */
 	private int getExitCodeFromExitCodeGeneratorException(Throwable exception) {
 		if (exception == null) {
 			return 0;

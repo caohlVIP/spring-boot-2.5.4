@@ -37,6 +37,10 @@ import org.springframework.core.env.ConfigurableEnvironment;
 public class AnsiOutputApplicationListener
 		implements ApplicationListener<ApplicationEnvironmentPreparedEvent>, Ordered {
 
+	/**
+	 *  执行当前监听的逻辑
+	 * @param event
+	 */
 	@Override
 	public void onApplicationEvent(ApplicationEnvironmentPreparedEvent event) {
 		ConfigurableEnvironment environment = event.getEnvironment();

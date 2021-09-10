@@ -78,10 +78,14 @@ class SpringApplicationShutdownHook implements Runnable {
 		return this.handlers;
 	}
 
+
 	void registerApplicationContext(ConfigurableApplicationContext context) {
 		synchronized (SpringApplicationShutdownHook.class) {
+			// 判断是否正在关闭服务，如果正在关闭服务，则直接报异常
 			assertNotInProgress();
+			// 注册关闭的监听到应用上下文中
 			context.addApplicationListener(this.contextCloseListener);
+			// 将添加了关闭监听的上下文，放入上下文集合中
 			this.contexts.add(context);
 		}
 	}

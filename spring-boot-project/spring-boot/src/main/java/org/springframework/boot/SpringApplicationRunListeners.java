@@ -57,7 +57,9 @@ class SpringApplicationRunListeners {
 	 * @param mainApplicationClass
 	 */
 	void starting(ConfigurableBootstrapContext bootstrapContext, Class<?> mainApplicationClass) {
-		doWithListeners("spring.boot.application.starting", (listener) -> listener.starting(bootstrapContext),
+		doWithListeners("spring.boot.application.starting",
+				// 执行当前listener的stating()方法
+				(listener) -> listener.starting(bootstrapContext),
 				(step) -> {
 					if (mainApplicationClass != null) {
 						step.tag("mainApplicationClass", mainApplicationClass.getName());
@@ -119,6 +121,11 @@ class SpringApplicationRunListeners {
 		}
 	}
 
+	/**
+	 *
+	 * @param stepName
+	 * @param listenerAction
+	 */
 	private void doWithListeners(String stepName, Consumer<SpringApplicationRunListener> listenerAction) {
 		doWithListeners(stepName, listenerAction, null);
 	}
@@ -137,11 +144,15 @@ class SpringApplicationRunListeners {
 	 */
 	private void doWithListeners(String stepName, Consumer<SpringApplicationRunListener> listenerAction,
 			Consumer<StartupStep> stepAction) {
+		// 初始化一个StartupStep实例，并命名为"spring.boot.application.starting"其作用为：追踪“执行时间”或其他指标。
 		StartupStep step = this.applicationStartup.start(stepName);
+		// 遍历内部的listeners,执行第一个Consumer参数，是函数式编程参数
 		this.listeners.forEach(listenerAction);
+		// 如果第二个Consumer参数不为空，则执行本参数的动作。是函数式编程
 		if (stepAction != null) {
 			stepAction.accept(step);
 		}
+		// 记录步骤的状态以及可能的其他指标，例如执行时间。 一旦结束，则不允许更改步骤状态。
 		step.end();
 	}
 

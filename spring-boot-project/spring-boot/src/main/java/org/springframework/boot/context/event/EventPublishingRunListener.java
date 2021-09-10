@@ -76,6 +76,14 @@ public class EventPublishingRunListener implements SpringApplicationRunListener,
 	 */
 	@Override
 	public void starting(ConfigurableBootstrapContext bootstrapContext) {
+		// 在multicastEvent()方法中，线程池为null，固调用了invokeListener(listener, event)方法
+		// 也就是调用了listener.onApplicationEvent(event)方法。
+		//
+		// 此处符合ApplicationStartingEvent事件的监听器有：
+		// 		LoggingApplicationListener: 初始化了loggingSystem
+		// 		BackgroundPreinitializer:未执行任何操作
+		// 		DelegatingApplicationListener:未执行任何操作
+		// 		LiquibaseServiceLocatorApplicationListener:未执行任何操作
 		this.initialMulticaster
 				.multicastEvent(new ApplicationStartingEvent(bootstrapContext, this.application, this.args));
 	}
